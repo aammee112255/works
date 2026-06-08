@@ -1,326 +1,320 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-TW">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>魚類數字填色遊戲</title>
-
-<style>
-body{
-    font-family:Arial,sans-serif;
-    background:#f5f5f5;
-    text-align:center;
-}
-
-#board{
-    display:grid;
-    grid-template-columns:repeat(10,40px);
-    gap:2px;
-    justify-content:center;
-    margin:20px auto;
-}
-
-.cell{
-    width:40px;
-    height:40px;
-    background:white;
-    border:1px solid #ccc;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    font-weight:bold;
-    cursor:pointer;
-}
-
-button{
-    margin:5px;
-    padding:10px;
-    border:none;
-    color:white;
-    font-weight:bold;
-    cursor:pointer;
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>無限循環幾何魚 10 關挑戰</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000000;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        #game-container {
+            text-align: center;
+            width: 100%;
+            max-width: 800px;
+            padding: 20px;
+        }
+        header {
+            margin-bottom: 20px;
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin: 0 0 10px 0;
+            background: linear-gradient(45deg, #00d2ff, #3a7bd5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(0,210,255,0.2);
+        }
+        #level-indicator {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ffdd67;
+            text-shadow: 0 0 10px rgba(255,221,103,0.5);
+        }
+        #fish-stage {
+            width: 100%;
+            height: 400px;
+            background: #050505;
+            border: 2px solid #222;
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(255,255,255,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 25px;
+            position: relative;
+        }
+        svg {
+            width: 100%;
+            height: 100%;
+            max-width: 600px;
+            max-height: 350px;
+        }
+        .fish-part {
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.3s, fill 0.3s;
+            stroke: #000000;
+            stroke-width: 2px;
+            stroke-linejoin: round;
+        }
+        .fish-part:hover {
+            transform: scale(1.02);
+            filter: brightness(1.3);
+        }
+        .captured {
+            fill: #333333 !important;
+            opacity: 0.3;
+            pointer-events: none;
+        }
+        #hint-text {
+            font-size: 1.2rem;
+            color: #888;
+            margin-bottom: 15px;
+            height: 24px;
+        }
+        #next-btn {
+            padding: 12px 35px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #00f260, #0575e6);
+            border: none;
+            border-radius: 25px;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0,242,96,0.3);
+            transition: all 0.2s;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(10px);
+        }
+        #next-btn.show {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+        #next-btn:hover {
+            box-shadow: 0 8px 25px rgba(0,242,96,0.5);
+            transform: translateY(-2px);
+        }
+    </style>
 </head>
 <body>
 
-<h1>🐟 魚類數字填色</h1>
-<h2 id="levelText"></h2>
+<div id="game-container">
+    <header>
+        <h1>GEOMETRIC FISH</h1>
+        <div id="level-indicator">第 1 / 10 關</div>
+    </header>
 
-<div id="palette"></div>
+    <div id="fish-stage">
+        </div>
 
-<p>
-目前選擇：
-<span id="currentColor">無</span>
-</p>
-
-<div id="board"></div>
-
-<h2 id="message"></h2>
+    <div id="hint-text">請點擊任意色塊收集這隻魚！</div>
+    <button id="next-btn" onclick="nextLevel()">下一關 ➔</button>
+</div>
 
 <script>
+    // 10 關不同的魚類幾何形狀（使用五個色塊定義：藍、綠、黃、紅、紫）
+    const fishData = [
+        // 關卡 1：標準熱帶魚
+        {
+            type: "熱帶魚",
+            paths: [
+                { color: "#0055ff", d: "M 150,175 L 250,100 L 250,250 Z" }, // 藍 (頭)
+                { color: "#00cc66", d: "M 250,100 L 350,120 L 300,175 L 250,250 L 250,100" }, // 綠 (前身)
+                { color: "#ffcc00", d: "M 350,120 L 430,150 L 380,200 L 300,175 Z" }, // 黃 (腹)
+                { color: "#ff3333", d: "M 430,150 L 480,175 L 430,220 L 380,200 Z" }, // 紅 (後身)
+                { color: "#9933ff", d: "M 480,175 L 550,110 L 520,175 L 550,240 Z" }  // 紫 (尾)
+            ]
+        },
+        // 關卡 2：肥胖金魚
+        {
+            type: "大金魚",
+            paths: [
+                { color: "#0055ff", d: "M 180,175 L 240,110 L 260,240 Z" }, 
+                { color: "#00cc66", d: "M 240,110 L 360,90 L 340,180 L 260,240 Z" }, 
+                { color: "#ffcc00", d: "M 340,180 L 360,90 L 440,140 L 420,220 Z" }, 
+                { color: "#ff3333", d: "M 420,220 L 440,140 L 470,175 Z" }, 
+                { color: "#9933ff", d: "M 470,175 L 560,80 L 510,175 L 570,270 L 470,175" } 
+            ]
+        },
+        // 關卡 3：流線型鯊魚
+        {
+            type: "深海鯊",
+            paths: [
+                { color: "#0055ff", d: "M 120,175 L 220,140 L 220,200 Z" }, 
+                { color: "#00cc66", d: "M 220,140 L 300,70 L 340,150 L 220,200 Z" }, 
+                { color: "#ffcc00", d: "M 340,150 L 300,70 L 420,150 L 320,220 Z" }, 
+                { color: "#ff3333", d: "M 420,150 L 490,165 L 460,195 L 320,220 Z" }, 
+                { color: "#9933ff", d: "M 490,165 L 560,100 L 530,175 L 555,240 L 460,195 Z" } 
+            ]
+        },
+        // 關卡 4：圓形曼波魚
+        {
+            type: "翻車魚",
+            paths: [
+                { color: "#0055ff", d: "M 200,175 L 260,110 L 260,240 Z" }, 
+                { color: "#00cc66", d: "M 260,110 L 350,110 L 350,240 L 260,240 Z" }, 
+                { color: "#ffcc00", d: "M 350,110 L 350,30 L 410,110 Z" }, // 巨大背鰭
+                { color: "#ff3333", d: "M 350,240 L 410,240 L 350,320 Z" }, // 巨大腹鰭
+                { color: "#9933ff", d: "M 350,110 L 450,175 L 410,240 Z" }  // 扁平尾部
+            ]
+        },
+        // 關卡 5：寬扁魟魚
+        {
+            type: "幾何魟",
+            paths: [
+                { color: "#0055ff", d: "M 300,100 L 350,150 L 250,150 Z" }, 
+                { color: "#00cc66", d: "M 250,150 L 350,150 L 480,200 L 300,200 Z" }, // 右翼
+                { color: "#ffcc00", d: "M 250,150 L 300,200 L 120,200 L 250,150 Z" }, // 左翼
+                { color: "#ff3333", d: "M 300,200 L 480,200 L 300,240 Z" }, 
+                { color: "#9933ff", d: "M 300,240 L 310,340 L 290,340 Z" } // 長尾巴
+            ]
+        },
+        // 關卡 6：古代劍魚
+        {
+            type: "火箭劍魚",
+            paths: [
+                { color: "#0055ff", d: "M 80,175 L 220,150 L 220,195 Z" }, // 長劍嘴
+                { color: "#00cc66", d: "M 220,150 L 340,130 L 320,195 L 220,195 Z" }, 
+                { color: "#ffcc00", d: "M 340,130 L 430,140 L 400,195 L 320,195 Z" }, 
+                { color: "#ff3333", d: "M 430,140 L 490,160 L 470,190 L 400,195 Z" }, 
+                { color: "#9933ff", d: "M 490,160 L 550,120 L 530,175 L 560,230 L 470,190 Z" } 
+            ]
+        },
+        // 關卡 7：三角神仙魚
+        {
+            type: "神仙魚",
+            paths: [
+                { color: "#0055ff", d: "M 160,175 L 250,120 L 250,230 Z" }, 
+                { color: "#00cc66", d: "M 250,120 L 330,40 L 300,175 L 250,230 Z" }, // 延伸上高鰭
+                { color: "#ffcc00", d: "M 250,230 L 300,175 L 330,310 Z" }, // 延伸下垂鰭
+                { color: "#ff3333", d: "M 300,175 L 400,150 L 400,200 Z" }, 
+                { color: "#9933ff", d: "M 400,150 L 480,130 L 450,175 L 480,220 L 400,200 Z" } 
+            ]
+        },
+        // 關卡 8：飛魚
+        {
+            type: "幾何飛魚",
+            paths: [
+                { color: "#0055ff", d: "M 150,175 L 230,140 L 230,210 Z" }, 
+                { color: "#00cc66", d: "M 230,140 L 310,40 L 290,175 L 230,210 Z" }, // 巨大鳥翼上
+                { color: "#ffcc00", d: "M 230,210 L 290,175 L 310,310 Z" }, // 巨大鳥翼下
+                { color: "#ff3333", d: "M 290,175 L 420,160 L 400,200 Z" }, 
+                { color: "#9933ff", d: "M 420,160 L 510,130 L 470,185 L 500,230 L 400,200 Z" } 
+            ]
+        },
+        // 關卡 9：有毒河豚
+        {
+            type: "刺河豚",
+            paths: [
+                { color: "#0055ff", d: "M 180,175 L 240,120 L 240,230 Z" }, 
+                { color: "#00cc66", d: "M 240,120 L 340,100 L 340,175 L 240,230 Z" }, 
+                { color: "#ffcc00", d: "M 240,230 L 340,175 L 340,250 Z" }, 
+                { color: "#ff3333", d: "M 340,100 L 420,150 L 420,200 L 340,250 Z" }, 
+                { color: "#9933ff", d: "M 420,150 L 490,130 L 460,175 L 490,220 L 420,200 Z" } 
+            ]
+        },
+        // 關卡 10：夢幻海馬
+        {
+            type: "幾何海馬",
+            paths: [
+                { color: "#0055ff", d: "M 260,100 L 310,70 L 310,120 L 260,120 Z" }, // 頭部
+                { color: "#00cc66", d: "M 260,120 L 310,120 L 330,190 L 250,190 Z" }, // 上身
+                { color: "#ffcc00", d: "M 250,190 L 330,190 L 300,260 L 260,260 Z" }, // 下身
+                { color: "#ff3333", d: "M 260,260 L 300,260 L 270,330 L 240,300 Z" }, // 捲尾巴
+                { color: "#9933ff", d: "M 310,120 L 350,140 L 330,170 Z" } // 背鰭
+            ]
+        }
+    ];
 
-const colors={
-1:"#FF595E",
-2:"#FFCA3A",
-3:"#8AC926",
-4:"#1982C4",
-5:"#6A4C93"
-};
+    let currentLevel = 0;
+    let clickedParts = 0;
 
-const levels=[
+    function initGame() {
+        clickedParts = 0;
+        document.getElementById('next-btn').classList.remove('show');
+        document.getElementById('hint-text').innerText = "請點擊任意色塊收集這隻魚！";
+        document.getElementById('level-indicator').innerText = `第 ${currentLevel + 1} / 10 關 (${fishData[currentLevel].type})`;
+        
+        const stage = document.getElementById('fish-stage');
+        stage.innerHTML = ''; // 清空上一關
 
-/* 第1關 小魚 */
-[
-[0,0,0,2,2,2,0,0,0,0],
-[0,0,2,1,1,1,2,0,0,0],
-[0,2,1,1,3,1,1,2,0,0],
-[2,1,1,1,1,1,1,1,2,0],
-[4,4,4,4,4,4,4,4,4,5],
-[2,1,1,1,1,1,1,1,2,0],
-[0,2,1,1,3,1,1,2,0,0],
-[0,0,2,1,1,1,2,0,0,0],
-[0,0,0,2,2,2,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0]
-],
+        // 建立 SVG 畫布
+        const svgNS = "http://www.w3.org/2000/svg";
+        const svg = document.createElementNS(svgNS, "svg");
+        svg.setAttribute("viewBox", "0 0 600 350");
 
-/* 第2關 金魚 */
-[
-[0,0,0,1,1,1,0,0,0,0],
-[0,0,1,2,2,2,1,0,0,0],
-[0,1,2,2,3,2,2,1,0,0],
-[1,2,2,2,2,2,2,2,1,0],
-[5,5,5,5,5,5,5,5,5,4],
-[1,2,2,2,2,2,2,2,1,0],
-[0,1,2,2,3,2,2,1,0,0],
-[0,0,1,2,2,2,1,0,0,0],
-[0,0,0,1,1,1,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0]
-],
+        // 取得當前關卡的魚資料
+        const currentFish = fishData[currentLevel];
 
-/* 第3關 小丑魚 */
-[
-[0,0,0,3,3,3,0,0,0,0],
-[0,0,3,1,1,1,3,0,0,0],
-[0,3,1,2,4,2,1,3,0,0],
-[3,1,2,2,2,2,2,1,3,0],
-[5,5,5,5,5,5,5,5,5,4],
-[3,1,2,2,2,2,2,1,3,0],
-[0,3,1,2,4,2,1,3,0,0],
-[0,0,3,1,1,1,3,0,0,0],
-[0,0,0,3,3,3,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0]
-],
+        // 繪製色塊
+        currentFish.paths.forEach((part, index) => {
+            const path = document.createElementNS(svgNS, "path");
+            path.setAttribute("d", part.d);
+            path.setAttribute("fill", part.color);
+            path.setAttribute("class", "fish-part");
+            
+            // 點擊色塊互動
+            path.addEventListener('click', function() {
+                if (!this.classList.contains('captured')) {
+                    this.classList.add('captured');
+                    clickedParts++;
+                    
+                    // 隨機震動特效
+                    createSparkle();
 
-/* 第4關 鯊魚 */
-[
-[0,0,0,4,4,4,0,0,0,0],
-[0,0,4,4,4,4,4,0,0,0],
-[0,4,4,1,1,1,4,4,0,0],
-[4,4,1,1,3,1,1,4,4,0],
-[5,5,5,5,5,5,5,5,5,2],
-[4,4,1,1,3,1,1,4,4,0],
-[0,4,4,1,1,1,4,4,0,0],
-[0,0,4,4,4,4,4,0,0,0],
-[0,0,0,4,4,4,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0]
-],
+                    if (clickedParts === 5) {
+                        document.getElementById('hint-text').innerText = "🎉 完美收集！成功解鎖下一關！";
+                        document.getElementById('next-btn').classList.add('show');
+                    } else {
+                        document.getElementById('hint-text').innerText = `已收集 ${clickedParts} / 5 個色塊`;
+                    }
+                }
+            });
 
-/* 第5關 河豚 */
-[
-[0,0,1,1,1,1,1,0,0,0],
-[0,1,2,2,2,2,2,1,0,0],
-[1,2,2,3,3,3,2,2,1,0],
-[1,2,3,3,4,3,3,2,1,0],
-[5,5,5,5,5,5,5,5,5,4],
-[1,2,3,3,4,3,3,2,1,0],
-[1,2,2,3,3,3,2,2,1,0],
-[0,1,2,2,2,2,2,1,0,0],
-[0,0,1,1,1,1,1,0,0,0],
-[0,0,0,0,0,0,0,0,0,0]
-]
+            svg.appendChild(path);
+        });
 
-];
+        stage.appendChild(svg);
+    }
 
-let currentLevel=0;
-let selectedColor=null;
+    function nextLevel() {
+        currentLevel++;
+        // 如果超過第 10 關（index 9），就重設回第 1 關（index 0）達成無限循環
+        if (currentLevel >= fishData.length) {
+            currentLevel = 0;
+            alert("恭喜你通關全部 10 種魚類！現在將進入無限循環模式！");
+        }
+        initGame();
+    }
 
-for(let n in colors){
+    // 簡單的小特效：點擊時讓背景閃爍一下
+    function createSparkle() {
+        const stage = document.getElementById('fish-stage');
+        stage.style.boxShadow = "0 0 40px rgba(255,255,255,0.2)";
+        setTimeout(() => {
+            stage.style.boxShadow = "0 0 30px rgba(255,255,255,0.05)";
+        }, 150);
+    }
 
-const btn=document.createElement("button");
-
-btn.textContent=n+"號";
-btn.style.background=colors[n];
-
-btn.onclick=()=>{
-selectedColor=Number(n);
-currentColor.textContent=n+"號";
-};
-
-palette.appendChild(btn);
-}
-
-function loadLevel(){
-
-levelText.textContent=
-`第 ${currentLevel+1} 關 / ${levels.length}`;
-
-message.textContent="";
-
-board.innerHTML="";
-
-levels[currentLevel].forEach(row=>{
-
-row.forEach(value=>{
-
-const cell=document.createElement("div");
-
-cell.className="cell";
-
-if(value===0){
-
-cell.style.visibility="hidden";
-
-}else{
-
-cell.textContent=value;
-cell.dataset.answer=value;
-
-cell.onclick=()=>paint(cell);
-}
-
-board.appendChild(cell);
-
-});
-
-});
-
-}
-
-function paint(cell){
-
-if(selectedColor===null) return;
-
-if(Number(cell.dataset.answer)===selectedColor){
-
-cell.style.background=
-colors[selectedColor];
-
-cell.textContent="";
-cell.dataset.done="1";
-
-checkWin();
-
-}
-
-}
-
-function checkWin(){
-
-const cells=
-document.querySelectorAll(
-".cell[data-answer]"
-);
-
-for(const cell of cells){
-
-if(cell.dataset.done!=="1"){
-return;
-}
-
-}
-
-message.textContent=
-"🎉 恭喜過關！";
-
-setTimeout(()=>{
-
-currentLevel++;
-
-if(currentLevel>=levels.length){
-
-currentLevel=0;
-
-}
-
-loadLevel();
-
-},1500);
-
-}
-
-loadLevel();
-
+    // 網頁載入時初始化第一關
+    window.onload = initGame;
 </script>
-/* 第6關 熱帶魚 */
-[
-[0,0,0,5,5,5,0,0,0,0],
-[0,0,5,1,1,1,5,0,0,0],
-[0,5,1,2,2,2,1,5,0,0],
-[5,1,2,3,3,3,2,1,5,0],
-[4,4,4,4,4,4,4,4,4,1],
-[5,1,2,3,3,3,2,1,5,0],
-[0,5,1,2,2,2,1,5,0,0],
-[0,0,5,1,1,1,5,0,0,0],
-[0,0,0,5,5,5,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0]
-],
-
-/* 第7關 劍魚 */
-[
-[0,0,0,0,5,5,5,0,0,0],
-[0,0,0,5,1,1,1,5,0,0],
-[5,5,5,1,2,2,2,1,5,0],
-[0,0,5,2,3,3,3,2,5,0],
-[4,4,4,4,4,4,4,4,4,1],
-[0,0,5,2,3,3,3,2,5,0],
-[5,5,5,1,2,2,2,1,5,0],
-[0,0,0,5,1,1,1,5,0,0],
-[0,0,0,0,5,5,5,0,0,0],
-[0,0,0,0,0,0,0,0,0,0]
-],
-
-/* 第8關 魟魚 */
-[
-[0,0,1,1,0,0,1,1,0,0],
-[0,1,2,2,1,1,2,2,1,0],
-[1,2,3,3,2,2,3,3,2,1],
-[1,2,3,4,4,4,4,3,2,1],
-[5,5,5,5,5,5,5,5,5,5],
-[1,2,3,4,4,4,4,3,2,1],
-[1,2,3,3,2,2,3,3,2,1],
-[0,1,2,2,1,1,2,2,1,0],
-[0,0,1,1,0,0,1,1,0,0],
-[0,0,0,0,5,5,0,0,0,0]
-],
-
-/* 第9關 海馬 */
-[
-[0,0,0,1,1,0,0,0,0,0],
-[0,0,1,2,2,1,0,0,0,0],
-[0,1,2,3,3,2,1,0,0,0],
-[0,1,2,3,4,3,1,0,0,0],
-[0,1,2,3,4,3,1,0,0,0],
-[0,0,1,2,3,2,1,0,0,0],
-[0,0,0,1,2,1,0,0,0,0],
-[0,0,1,2,3,2,1,0,0,0],
-[0,1,2,3,4,3,2,1,0,0],
-[5,5,5,5,5,5,5,5,5,5]
-],
-
-/* 第10關 鯨魚 */
-[
-[0,0,4,4,4,4,0,0,0,0],
-[0,4,1,1,1,1,4,0,0,0],
-[4,1,2,2,2,2,1,4,0,0],
-[4,1,2,3,3,2,1,4,0,0],
-[5,5,5,5,5,5,5,5,5,4],
-[4,1,2,3,3,2,1,4,0,0],
-[4,1,2,2,2,2,1,4,0,0],
-[0,4,1,1,1,1,4,0,0,0],
-[0,0,4,4,4,4,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0]
-]
 
 </body>
 </html>
