@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>創意色彩作業：像素吞噬者 (Color Merge IO)</title>
+    <title>創意色彩作業：像素吞噬者 V2 (Color Merge IO)</title>
     <style>
         * {
             box-sizing: border-box;
@@ -53,7 +53,7 @@
         canvas {
             display: block;
             border-radius: 9px;
-            cursor: none; /* 隱藏預設滑鼠，用網頁物件代替 */
+            cursor: none; 
         }
 
         /* 結束面板 */
@@ -112,7 +112,7 @@
     </div>
 </div>
 
-<div id="tip">💡 創意玩法：控制小球吃地上的彩色碎片可以**改變自身顏色**並變大。你只能吃**比你小**或**顏色相近**的敵對球。如果去撞比你大且顏色相斥的球，你會被瞬間秒殺！</div>
+<div id="tip">💡 修正優化版：修正了後期大球卡在邊緣的問題！吃碎片改變顏色，追擊弱小者，小心避開危險的巨大相斥異色球。</div>
 
 <script>
     const canvas = document.getElementById('gameCanvas');
@@ -121,7 +121,7 @@
     let isGameOver = false;
     let score = 15; // 初始體型半徑
 
-    // 1. 玩家定義 (RGB 初始值為隨機)
+    // 1. 玩家定義
     let player = {
         x: canvas.width / 2,
         y: canvas.height / 2,
@@ -148,21 +148,23 @@
         return `rgb(${Math.floor(rgbObj.r)}, ${Math.floor(rgbObj.g)}, ${Math.floor(rgbObj.b)})`;
     }
 
-    // 核心創意算法：計算兩個顏色的「相似度」（三維色彩歐幾里得距離）
+    // 計算兩個顏色的相似度
     function getColorDistance(c1, c2) {
         let dr = c1.r - c2.r;
         let dg = c1.g - c2.g;
         let db = c1.b - c2.b;
-        return Math.sqrt(dr*dr + dg*dg + db*db); // 值越小代表顏色越接近（0 為完全相同，最高約 441）
+        return Math.sqrt(dr*dr + dg*dg + db*db);
     }
 
     // 2. 食物碎片類別
     class Food {
         constructor() {
+            this.spawn();
+        }
+        spawn() {
             this.x = Math.random() * canvas.width;
             this.y = Math.random() * canvas.height;
-            this.r = Math.random() * 3 + 3; // 碎片大小
-            // 隨機發光三原色之一
+            this.r = Math.random() * 3 + 3;
             const seed = Math.random();
             if (seed < 0.33) this.color = { r: 255, g: 50, b: 50 };      // 紅
             else if (seed < 0.66) this.color = { r: 50, g: 255, b: 50 }; // 綠
@@ -182,51 +184,77 @@
             this.reset();
         }
         reset() {
-            // 從螢幕邊緣外隨機誕生
-            this.x = Math.random() > 0.5 ? -30 : canvas.width + 30;
-            this.y = Math.random() * canvas.height;
-            this.r = Math.random() * 20 + 10; // 隨機體型 10~30
+            // 從更遠的外圍隨機誕生，避免直接誕生在死角
+            const angle = Math.random() * Math.PI * 2;
+            const distance = Math.max(canvas.width, canvas.height) / 2 + 100;
+            this.x = canvas.width / 2 + Math.cos(angle) * distance;
+            this.y = canvas.height / 2 + Math.sin(angle) * distance;
+            
+            // 根據玩家目前的體型動態調整生成大小，避免無限膨脹
+            this.r = Math.random() * 15 + Math.max(10, player.r * 0.6);
+            if (this.r > 120) this.r = 120; // 【修正】限制電腦球最大半徑，防止塞滿螢幕
+
             this.color = {
                 r: Math.random() * 255,
                 g: Math.random() * 255,
                 b: Math.random() * 255
             };
-            this.speed = Math.random() * 0.8 + 0.8;
+            this.speed = Math.random() * 0.6 + 0.6;
+            
+            // 給予初始隨機巡邏向量
+            this.vx = (Math.random() - 0.5) * 2;
+            this.vy = (Math.random() - 0.5) * 2;
         }
         update() {
-            // AI 行為樹：計算與玩家的距離、體型與顏色相似度
             let dx = player.x - this.x;
             let dy = player.y - this.y;
             let dist = Math.hypot(dx, dy);
-
             let colorDist = getColorDistance(this.color, player.color);
             
-            // 決定 AI 要追逐還是逃跑
             let isDangerousToPlayer = (this.r > player.r) && (colorDist > 120); 
             let isWeakToPlayer = (this.r < player.r) || (colorDist <= 120);
 
             let angle = Math.atan2(dy, dx);
 
-            // 如果比玩家強且距離近，就去追殺玩家
-            if (isDangerousToPlayer && dist < 250) {
-                this.x += Math.cos(angle) * this.speed * 1.3;
-                this.y += Math.sin(angle) * this.speed * 1.3;
+            if (isDangerousToPlayer && dist < 300) {
+                // 追擊玩家
+                this.vx = Math.cos(angle) * this.speed * 1.4;
+                this.vy = Math.sin(angle) * this.speed * 1.4;
             } 
-            // 如果比玩家弱且距離太近，就反向逃跑
-            else if (isWeakToPlayer && dist < 150) {
-                this.x -= Math.cos(angle) * this.speed * 1.1;
-                this.y -= Math.sin(angle) * this.speed * 1.1;
+            else if (isWeakToPlayer && dist < 180) {
+                // 逃離玩家
+                this.vx = -Math.cos(angle) * this.speed * 1.2;
+                this.vy = -Math.sin(angle) * this.speed * 1.2;
             }
-            // 平時就漫無目的游動
             else {
-                this.x += (Math.random() - 0.5) * 2;
-                this.y += (Math.random() - 0.5) * 2;
+                // 隨機漫步，保持原本動量，避免卡在牆角不動
+                this.vx += (Math.random() - 0.5) * 0.1;
+                this.vy += (Math.random() - 0.5) * 0.1;
+                
+                let s = Math.hypot(this.vx, this.vy);
+                if (s > this.speed) {
+                    this.vx = (this.vx / s) * this.speed;
+                    this.vy = (this.vy / s) * this.speed;
+                }
             }
 
-            // 邊界限制
-            if (this.x < -50 || this.x > canvas.width + 50 || this.y < -50 || this.y > canvas.height + 50) {
+            // 更新位置
+            this.x += this.vx;
+            this.y += this.vy;
+
+            // 【重大修正 A：動態邊緣出界檢查】
+            // 加上自身半徑作為緩衝，確保整顆大球完全離開視野才重置
+            let buffer = this.r + 60;
+            if (this.x < -buffer || this.x > canvas.width + buffer || this.y < -buffer || this.y > canvas.height + buffer) {
                 this.reset();
             }
+
+            // 【重大修正 B：貼牆反彈與向心推力】
+            // 如果巨大的球觸碰到螢幕邊緣，施加一個拉回中心的推力，防止與牆面摩擦卡死
+            if (this.x < this.r) this.vx += 0.05;
+            if (this.x > canvas.width - this.r) this.vx -= 0.05;
+            if (this.y < this.r) this.vy += 0.05;
+            if (this.y > canvas.height - this.r) this.vy -= 0.05;
         }
         draw() {
             ctx.beginPath();
@@ -234,11 +262,9 @@
             ctx.fillStyle = getRGBString(this.color);
             ctx.fill();
             
-            // 繪製敵人的外圈，外圈顏色代表它的「敵對度」
-            // 顏色越接近代表可以吃，畫綠圈；越危險畫紅圈
             let colorDist = getColorDistance(this.color, player.color);
             ctx.strokeStyle = (this.r > player.r && colorDist > 120) ? '#ff3333' : '#33ff33';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 3;
             ctx.stroke();
         }
     }
@@ -261,18 +287,16 @@
     function gameLoop() {
         if (isGameOver) return;
 
-        // 繪製背景背景網格線，增添科技空間感
         ctx.fillStyle = '#060814';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         drawGrid();
 
-        // 更新玩家位置（平滑跟隨滑鼠）
+        // 更新玩家位置
         let targetX = mouse.x;
         let targetY = mouse.y;
         player.x += (targetX - player.x) * 0.08;
         player.y += (targetY - player.y) * 0.08;
 
-        // 限制玩家不出螢幕外
         player.x = Math.max(player.r, Math.min(canvas.width - player.r, player.x));
         player.y = Math.max(player.r, Math.min(canvas.height - player.r, player.y));
 
@@ -283,25 +307,24 @@
         ctx.shadowBlur = player.r * 0.5;
         ctx.shadowColor = getRGBString(player.color);
         ctx.fill();
-        ctx.shadowBlur = 0; // 重置發光
+        ctx.shadowBlur = 0; 
 
         // 處理食物碎片
         for (let i = foods.length - 1; i >= 0; i--) {
             foods[i].draw();
 
-            // 玩家吃碎片碰撞偵測
             let dist = Math.hypot(player.x - foods[i].x, player.y - foods[i].y);
             if (dist < player.r + foods[i].r) {
-                // 核心機制：體型變大，且顏色混入碎片的顏色 (權重融合演算法)
-                player.r += 0.2; // 吃一個稍微變大
-                
-                // 混色演算法：98%原本色彩 + 2%食物色彩
+                player.r += 0.2; 
+                // 限制玩家最大體型半徑為 100，避免爆出螢幕
+                if(player.r > 100) player.r = 100;
+
                 player.color.r = player.color.r * 0.98 + foods[i].color.r * 0.02;
                 player.color.g = player.color.g * 0.98 + foods[i].color.g * 0.02;
                 player.color.b = player.color.b * 0.98 + foods[i].color.b * 0.02;
 
                 foods.splice(i, 1);
-                foods.push(new Food()); // 補上一顆新的
+                foods.push(new Food()); 
                 updateUI();
             }
         }
@@ -312,28 +335,23 @@
             e.update();
             e.draw();
 
-            // 玩家與 AI 球的衝突碰撞偵測
             let dist = Math.hypot(player.x - e.x, player.y - e.y);
-            if (dist < player.r + e.r - 5) { // 稍微重疊時觸發吞噬
+            if (dist < player.r + e.r - 3) { 
                 let colorDist = getColorDistance(player.color, e.color);
 
-                // 情況 A：顏色很相近 (距離小於120) 或者 玩家體型比對方大 ➔ 玩家吃掉 AI
                 if (colorDist <= 120 || player.r > e.r) {
-                    // 玩家吸收對方的體型
-                    player.r += e.r * 0.2;
-                    // 同時玩家顏色被對方同化一部分
+                    player.r += e.r * 0.15;
+                    if(player.r > 100) player.r = 100;
+
                     player.color.r = player.color.r * 0.7 + e.color.r * 0.3;
                     player.color.g = player.color.g * 0.7 + e.color.g * 0.3;
                     player.color.b = player.color.b * 0.7 + e.color.b * 0.3;
                     
                     enemies.splice(i, 1);
                     let newEnemy = new Enemy();
-                    // 為了平衡，新生成的敵人有機會比玩家更大
-                    newEnemy.r = Math.random() * 20 + player.r - 5;
                     enemies.push(newEnemy);
                     updateUI();
                 } 
-                // 情況 B：對方比較大且顏色相斥 ➔ 玩家死亡
                 else {
                     endGame();
                 }
@@ -343,7 +361,6 @@
         requestAnimationFrame(gameLoop);
     }
 
-    // 繪製裝飾用的背景科技網格
     function drawGrid() {
         ctx.strokeStyle = '#11152c';
         ctx.lineWidth = 1;
@@ -373,7 +390,6 @@
         gameLoop();
     }
 
-    // 遊戲啟動啟動
     init();
     gameLoop();
 </script>
