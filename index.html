@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>魚兒數字填色</title>
+<title>魚類數字填色遊戲</title>
 
 <style>
 body{
@@ -32,9 +32,9 @@ body{
     cursor:pointer;
 }
 
-.palette button{
+button{
     margin:5px;
-    padding:10px 15px;
+    padding:10px;
     border:none;
     color:white;
     font-weight:bold;
@@ -44,12 +44,13 @@ body{
 </head>
 <body>
 
-<h1>🐟 魚兒數字填色</h1>
+<h1>🐟 魚類數字填色</h1>
 <h2 id="levelText"></h2>
 
-<div class="palette" id="palette"></div>
+<div id="palette"></div>
 
-<p>目前選擇：
+<p>
+目前選擇：
 <span id="currentColor">無</span>
 </p>
 
@@ -59,203 +60,267 @@ body{
 
 <script>
 
-const colors = {
-    1:"#ff595e",
-    2:"#ffca3a",
-    3:"#8ac926",
-    4:"#1982c4",
-    5:"#6a4c93"
+const colors={
+1:"#FF595E",
+2:"#FFCA3A",
+3:"#8AC926",
+4:"#1982C4",
+5:"#6A4C93"
 };
 
-let currentLevel = 0;
-let selectedColor = null;
+const levels=[
 
-/* 建立魚圖案 */
-function createFish(pattern){
+/* 第1關 小魚 */
+[
+[0,0,0,2,2,2,0,0,0,0],
+[0,0,2,1,1,1,2,0,0,0],
+[0,2,1,1,3,1,1,2,0,0],
+[2,1,1,1,1,1,1,1,2,0],
+[4,4,4,4,4,4,4,4,4,5],
+[2,1,1,1,1,1,1,1,2,0],
+[0,2,1,1,3,1,1,2,0,0],
+[0,0,2,1,1,1,2,0,0,0],
+[0,0,0,2,2,2,0,0,0,0],
+[0,0,0,0,0,0,0,0,0,0]
+],
 
-    const grid = [];
+/* 第2關 金魚 */
+[
+[0,0,0,1,1,1,0,0,0,0],
+[0,0,1,2,2,2,1,0,0,0],
+[0,1,2,2,3,2,2,1,0,0],
+[1,2,2,2,2,2,2,2,1,0],
+[5,5,5,5,5,5,5,5,5,4],
+[1,2,2,2,2,2,2,2,1,0],
+[0,1,2,2,3,2,2,1,0,0],
+[0,0,1,2,2,2,1,0,0,0],
+[0,0,0,1,1,1,0,0,0,0],
+[0,0,0,0,0,0,0,0,0,0]
+],
 
-    for(let r=0;r<10;r++){
-        grid[r]=[];
+/* 第3關 小丑魚 */
+[
+[0,0,0,3,3,3,0,0,0,0],
+[0,0,3,1,1,1,3,0,0,0],
+[0,3,1,2,4,2,1,3,0,0],
+[3,1,2,2,2,2,2,1,3,0],
+[5,5,5,5,5,5,5,5,5,4],
+[3,1,2,2,2,2,2,1,3,0],
+[0,3,1,2,4,2,1,3,0,0],
+[0,0,3,1,1,1,3,0,0,0],
+[0,0,0,3,3,3,0,0,0,0],
+[0,0,0,0,0,0,0,0,0,0]
+],
 
-        for(let c=0;c<10;c++){
-            grid[r][c]=0;
-        }
-    }
+/* 第4關 鯊魚 */
+[
+[0,0,0,4,4,4,0,0,0,0],
+[0,0,4,4,4,4,4,0,0,0],
+[0,4,4,1,1,1,4,4,0,0],
+[4,4,1,1,3,1,1,4,4,0],
+[5,5,5,5,5,5,5,5,5,2],
+[4,4,1,1,3,1,1,4,4,0],
+[0,4,4,1,1,1,4,4,0,0],
+[0,0,4,4,4,4,4,0,0,0],
+[0,0,0,4,4,4,0,0,0,0],
+[0,0,0,0,0,0,0,0,0,0]
+],
 
-    /* 魚身 */
-    for(let r=2;r<=7;r++){
+/* 第5關 河豚 */
+[
+[0,0,1,1,1,1,1,0,0,0],
+[0,1,2,2,2,2,2,1,0,0],
+[1,2,2,3,3,3,2,2,1,0],
+[1,2,3,3,4,3,3,2,1,0],
+[5,5,5,5,5,5,5,5,5,4],
+[1,2,3,3,4,3,3,2,1,0],
+[1,2,2,3,3,3,2,2,1,0],
+[0,1,2,2,2,2,2,1,0,0],
+[0,0,1,1,1,1,1,0,0,0],
+[0,0,0,0,0,0,0,0,0,0]
+]
 
-        for(let c=2;c<=7;c++){
+];
 
-            grid[r][c]=((c-2+pattern)%5)+1;
-        }
-    }
+let currentLevel=0;
+let selectedColor=null;
 
-    /* 尾巴 */
-    grid[3][0]=2;
-    grid[4][1]=1;
-    grid[5][1]=1;
-    grid[6][0]=2;
+for(let n in colors){
 
-    /* 魚嘴 */
-    grid[4][8]=3;
-    grid[5][8]=3;
-    grid[3][9]=4;
-    grid[6][9]=4;
+const btn=document.createElement("button");
 
-    return grid;
-}
+btn.textContent=n+"號";
+btn.style.background=colors[n];
 
-/* 10關 */
-const levels=[];
+btn.onclick=()=>{
+selectedColor=Number(n);
+currentColor.textContent=n+"號";
+};
 
-for(let i=0;i<10;i++){
-
-    levels.push(createFish(i));
-}
-
-function createPalette(){
-
-    const palette =
-    document.getElementById("palette");
-
-    for(let num in colors){
-
-        const btn =
-        document.createElement("button");
-
-        btn.style.background=
-        colors[num];
-
-        btn.textContent=
-        num+"號";
-
-        btn.onclick=()=>{
-
-            selectedColor =
-            Number(num);
-
-            document.getElementById(
-            "currentColor"
-            ).textContent=
-            num+"號";
-        };
-
-        palette.appendChild(btn);
-    }
+palette.appendChild(btn);
 }
 
 function loadLevel(){
 
-    document.getElementById(
-    "levelText"
-    ).textContent=
-    `第 ${currentLevel+1} 關 / 10`;
+levelText.textContent=
+`第 ${currentLevel+1} 關 / ${levels.length}`;
 
-    document.getElementById(
-    "message"
-    ).textContent="";
+message.textContent="";
 
-    const board =
-    document.getElementById("board");
+board.innerHTML="";
 
-    board.innerHTML="";
+levels[currentLevel].forEach(row=>{
 
-    const grid =
-    levels[currentLevel];
+row.forEach(value=>{
 
-    for(let r=0;r<10;r++){
+const cell=document.createElement("div");
 
-        for(let c=0;c<10;c++){
+cell.className="cell";
 
-            const value=
-            grid[r][c];
+if(value===0){
 
-            const cell=
-            document.createElement("div");
+cell.style.visibility="hidden";
 
-            cell.className="cell";
+}else{
 
-            if(value===0){
+cell.textContent=value;
+cell.dataset.answer=value;
 
-                cell.style.visibility=
-                "hidden";
+cell.onclick=()=>paint(cell);
+}
 
-            }else{
+board.appendChild(cell);
 
-                cell.textContent=
-                value;
+});
 
-                cell.dataset.answer=
-                value;
+});
 
-                cell.onclick=
-                ()=>paint(cell);
-            }
-
-            board.appendChild(cell);
-        }
-    }
 }
 
 function paint(cell){
 
-    if(selectedColor===null)
-    return;
+if(selectedColor===null) return;
 
-    const answer =
-    Number(cell.dataset.answer);
+if(Number(cell.dataset.answer)===selectedColor){
 
-    if(answer===selectedColor){
+cell.style.background=
+colors[selectedColor];
 
-        cell.style.background=
-        colors[selectedColor];
+cell.textContent="";
+cell.dataset.done="1";
 
-        cell.textContent="";
+checkWin();
 
-        cell.dataset.done="1";
+}
 
-        checkWin();
-    }
 }
 
 function checkWin(){
 
-    const cells=
-    document.querySelectorAll(
-    ".cell[data-answer]"
-    );
+const cells=
+document.querySelectorAll(
+".cell[data-answer]"
+);
 
-    for(let cell of cells){
+for(const cell of cells){
 
-        if(cell.dataset.done!=="1")
-        return;
-    }
-
-    document.getElementById(
-    "message"
-    ).textContent=
-    "🎉 恭喜過關！";
-
-    setTimeout(()=>{
-
-        currentLevel++;
-
-        if(currentLevel>=10){
-
-            currentLevel=0;
-        }
-
-        loadLevel();
-
-    },1500);
+if(cell.dataset.done!=="1"){
+return;
 }
 
-createPalette();
+}
+
+message.textContent=
+"🎉 恭喜過關！";
+
+setTimeout(()=>{
+
+currentLevel++;
+
+if(currentLevel>=levels.length){
+
+currentLevel=0;
+
+}
+
+loadLevel();
+
+},1500);
+
+}
+
 loadLevel();
 
 </script>
+/* 第6關 熱帶魚 */
+[
+[0,0,0,5,5,5,0,0,0,0],
+[0,0,5,1,1,1,5,0,0,0],
+[0,5,1,2,2,2,1,5,0,0],
+[5,1,2,3,3,3,2,1,5,0],
+[4,4,4,4,4,4,4,4,4,1],
+[5,1,2,3,3,3,2,1,5,0],
+[0,5,1,2,2,2,1,5,0,0],
+[0,0,5,1,1,1,5,0,0,0],
+[0,0,0,5,5,5,0,0,0,0],
+[0,0,0,0,0,0,0,0,0,0]
+],
+
+/* 第7關 劍魚 */
+[
+[0,0,0,0,5,5,5,0,0,0],
+[0,0,0,5,1,1,1,5,0,0],
+[5,5,5,1,2,2,2,1,5,0],
+[0,0,5,2,3,3,3,2,5,0],
+[4,4,4,4,4,4,4,4,4,1],
+[0,0,5,2,3,3,3,2,5,0],
+[5,5,5,1,2,2,2,1,5,0],
+[0,0,0,5,1,1,1,5,0,0],
+[0,0,0,0,5,5,5,0,0,0],
+[0,0,0,0,0,0,0,0,0,0]
+],
+
+/* 第8關 魟魚 */
+[
+[0,0,1,1,0,0,1,1,0,0],
+[0,1,2,2,1,1,2,2,1,0],
+[1,2,3,3,2,2,3,3,2,1],
+[1,2,3,4,4,4,4,3,2,1],
+[5,5,5,5,5,5,5,5,5,5],
+[1,2,3,4,4,4,4,3,2,1],
+[1,2,3,3,2,2,3,3,2,1],
+[0,1,2,2,1,1,2,2,1,0],
+[0,0,1,1,0,0,1,1,0,0],
+[0,0,0,0,5,5,0,0,0,0]
+],
+
+/* 第9關 海馬 */
+[
+[0,0,0,1,1,0,0,0,0,0],
+[0,0,1,2,2,1,0,0,0,0],
+[0,1,2,3,3,2,1,0,0,0],
+[0,1,2,3,4,3,1,0,0,0],
+[0,1,2,3,4,3,1,0,0,0],
+[0,0,1,2,3,2,1,0,0,0],
+[0,0,0,1,2,1,0,0,0,0],
+[0,0,1,2,3,2,1,0,0,0],
+[0,1,2,3,4,3,2,1,0,0],
+[5,5,5,5,5,5,5,5,5,5]
+],
+
+/* 第10關 鯨魚 */
+[
+[0,0,4,4,4,4,0,0,0,0],
+[0,4,1,1,1,1,4,0,0,0],
+[4,1,2,2,2,2,1,4,0,0],
+[4,1,2,3,3,2,1,4,0,0],
+[5,5,5,5,5,5,5,5,5,4],
+[4,1,2,3,3,2,1,4,0,0],
+[4,1,2,2,2,2,1,4,0,0],
+[0,4,1,1,1,1,4,0,0,0],
+[0,0,4,4,4,4,0,0,0,0],
+[0,0,0,0,0,0,0,0,0,0]
+]
 
 </body>
 </html>
