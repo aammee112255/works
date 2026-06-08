@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>創意幾何作業：霓虹引力捕手 (Neon Gravity)</title>
+    <title>創意色彩作業：像素吞噬者 (Color Merge IO)</title>
     <style>
         * {
             box-sizing: border-box;
@@ -12,7 +12,7 @@
         body {
             margin: 0;
             padding: 0;
-            background-color: #0a0a12;
+            background-color: #0c0f1d;
             color: #ffffff;
             font-family: 'Segoe UI', Arial, sans-serif;
             display: flex;
@@ -28,298 +28,353 @@
             display: flex;
             justify-content: space-between;
             width: 100%;
-            max-width: 800px;
+            max-width: 900px;
             padding: 0 20px;
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             font-weight: bold;
-            letter-spacing: 1px;
-            pointer-events: none; /* 讓字體不影響滑鼠點擊 */
+            pointer-events: none;
             z-index: 10;
         }
-        .score-box { color: #00f260; text-shadow: 0 0 10px rgba(0,242,96,0.5); }
-        .hp-box { color: #ff3366; text-shadow: 0 0 10px rgba(255,51,102,0.5); }
-        
+        .score-box { color: #00ffcc; text-shadow: 0 0 10px rgba(0,255,204,0.4); }
+        .color-box { display: flex; align-items: center; gap: 10px; color: #ffffff; }
+        #color-preview {
+            width: 20px; height: 20px; border-radius: 50%;
+            border: 2px solid white; display: inline-block;
+            box-shadow: 0 0 8px rgba(255,255,255,0.5);
+        }
+
         #canvas-container {
             position: relative;
-            border: 2px solid #1e1e38;
-            border-radius: 16px;
-            box-shadow: 0 0 40px rgba(0, 242, 254, 0.15);
-            background-color: #020208;
+            border: 3px solid #1a1f38;
+            border-radius: 12px;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.6);
+            background-color: #060814;
         }
         canvas {
             display: block;
-            border-radius: 14px;
-            cursor: crosshair;
+            border-radius: 9px;
+            cursor: none; /* 隱藏預設滑鼠，用網頁物件代替 */
         }
 
-        /* 遊戲結束蓋板 */
+        /* 結束面板 */
         #game-over-screen {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(5, 5, 15, 0.85);
-            backdrop-filter: blur(8px);
+            background: rgba(10, 12, 26, 0.9);
+            backdrop-filter: blur(6px);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            border-radius: 14px;
+            border-radius: 9px;
             opacity: 0;
             pointer-events: none;
-            transition: opacity 0.5s;
+            transition: opacity 0.4s;
             z-index: 20;
         }
-        #game-over-screen.show {
-            opacity: 1;
-            pointer-events: auto;
-        }
+        #game-over-screen.show { opacity: 1; pointer-events: auto; }
         h1 {
-            font-size: 3rem;
-            margin: 0 0 10px 0;
-            background: linear-gradient(45deg, #ff3366, #ff00a0);
+            font-size: 3.5rem; margin: 0;
+            background: linear-gradient(45deg, #ff0055, #00ffcc);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-        p { color: #8a8ab0; margin-bottom: 25px; font-size: 1.1rem; }
+        p { color: #a0a5c0; font-size: 1.2rem; margin: 15px 0 30px 0; }
         
         #restart-btn {
-            padding: 12px 35px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            color: #ffffff;
-            background: linear-gradient(135deg, #00f260, #0575e6);
-            border: none;
-            border-radius: 25px;
-            cursor: pointer;
-            box-shadow: 0 5px 15px rgba(0,242,96,0.3);
+            padding: 14px 40px; font-size: 1.2rem; font-weight: bold;
+            color: white; border: none; border-radius: 30px;
+            background: linear-gradient(135deg, #00ffcc, #0077ff);
+            cursor: pointer; box-shadow: 0 5px 20px rgba(0,255,204,0.3);
             transition: transform 0.2s, box-shadow 0.2s;
         }
         #restart-btn:hover {
             transform: scale(1.05);
-            box-shadow: 0 8px 25px rgba(0,242,96,0.5);
+            box-shadow: 0 8px 25px rgba(0,255,204,0.5);
         }
-        #instruction {
-            margin-top: 15px;
-            color: #5f5f85;
-            font-size: 0.9rem;
-        }
+        #tip { margin-top: 15px; color: #4e5578; font-size: 0.95rem; text-align: center; max-width: 600px; }
     </style>
 </head>
 <body>
 
 <div id="ui-layer">
-    <div class="score-box">SCORE: <span id="score-val">0</span></div>
-    <div class="hp-box">HP: <span id="hp-val">5</span></div>
+    <div class="score-box">SIZE / SCORE: <span id="score-val">15</span></div>
+    <div class="color-box">目前特徵色：<span id="color-preview"></span></div>
 </div>
 
 <div id="canvas-container">
-    <canvas id="gameCanvas" width="800" height="550"></canvas>
+    <canvas id="gameCanvas" width="900" height="600"></canvas>
     
     <div id="game-over-screen">
-        <h1>GAME OVER</h1>
-        <p>你的重力核心已過載。最終得分：<span id="final-score" style="color:#00f260; font-weight:bold;">0</span></p>
-        <button id="restart-btn" onclick="resetGame()">重啟核心 ➔</button>
+        <h1>你被吞噬了！</h1>
+        <p>最終演化體型（得分）：<span id="final-score" style="color:#00ffcc; font-weight:bold;">0</span></p>
+        <button id="restart-btn" onclick="resetGame()">重新繁衍 ➔</button>
     </div>
 </div>
 
-<div id="instruction">💡 操作說明：在畫面中【按住滑鼠左鍵】不放，可製造黑洞重力場引導小球進入中央核心！</div>
+<div id="tip">💡 創意玩法：控制小球吃地上的彩色碎片可以**改變自身顏色**並變大。你只能吃**比你小**或**顏色相近**的敵對球。如果去撞比你大且顏色相斥的球，你會被瞬間秒殺！</div>
 
 <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
-    // 遊戲運行核心變數
-    let score = 0;
-    let hp = 5;
     let isGameOver = false;
-    let particles = [];
-    let spawnTimer = 0;
-    let spawnRate = 60; // 每隔幾幀生成一顆球 (越低越快)
+    let score = 15; // 初始體型半徑
 
-    // 滑鼠與重力場狀態
-    let mouse = { x: 0, y: 0, isDown: false };
-    const gravitySource = { x: canvas.width / 2, y: canvas.height / 2, radius: 25 };
+    // 1. 玩家定義 (RGB 初始值為隨機)
+    let player = {
+        x: canvas.width / 2,
+        y: canvas.height / 2,
+        r: 15,
+        color: { r: 100, g: 200, b: 255 }
+    };
 
-    // 監聽滑鼠動作
+    // 遊戲元件陣列
+    let foods = [];
+    let enemies = [];
+    const maxFoods = 60;
+    const maxEnemies = 8;
+
+    // 滑鼠游標位置
+    let mouse = { x: canvas.width / 2, y: canvas.height / 2 };
     canvas.addEventListener('mousemove', (e) => {
         const rect = canvas.getBoundingClientRect();
         mouse.x = e.clientX - rect.left;
         mouse.y = e.clientY - rect.top;
     });
-    canvas.addEventListener('mousedown', () => mouse.isDown = true);
-    canvas.addEventListener('mouseup', () => mouse.isDown = false);
-    canvas.addEventListener('mouseleave', () => mouse.isDown = false);
 
-    // 粒子類別 (定義每一顆飛入的小球)
-    class Particle {
+    // 輔助函式：將 RGB 物件轉成 CSS 顏色格式
+    function getRGBString(rgbObj) {
+        return `rgb(${Math.floor(rgbObj.r)}, ${Math.floor(rgbObj.g)}, ${Math.floor(rgbObj.b)})`;
+    }
+
+    // 核心創意算法：計算兩個顏色的「相似度」（三維色彩歐幾里得距離）
+    function getColorDistance(c1, c2) {
+        let dr = c1.r - c2.r;
+        let dg = c1.g - c2.g;
+        let db = c1.b - c2.b;
+        return Math.sqrt(dr*dr + dg*dg + db*db); // 值越小代表顏色越接近（0 為完全相同，最高約 441）
+    }
+
+    // 2. 食物碎片類別
+    class Food {
         constructor() {
-            // 隨機從螢幕四個邊界之外生成
-            if (Math.random() > 0.5) {
-                this.x = Math.random() > 0.5 ? -20 : canvas.width + 20;
-                this.y = Math.random() * canvas.height;
-            } else {
-                this.x = Math.random() * canvas.width;
-                this.y = Math.random() > 0.5 ? -20 : canvas.height + 20;
-            }
-
-            // 給予衝向中央附近的初速度
-            const angle = Math.atan2(canvas.height/2 - this.y, canvas.width/2 - this.x) + (Math.random() - 0.5) * 0.5;
-            const speed = Math.random() * 2 + 1.5;
-            this.vx = Math.cos(angle) * speed;
-            this.vy = Math.sin(angle) * speed;
-
-            this.radius = Math.random() * 4 + 5; // 半徑 5~9
-            // 隨機賦予螢光色彩
-            const colors = ['#00f260', '#00d2ff', '#ff00a0', '#ffdd67', '#9933ff'];
-            this.color = colors[Math.floor(Math.random() * colors.length)];
+            this.x = Math.random() * canvas.width;
+            this.y = Math.random() * canvas.height;
+            this.r = Math.random() * 3 + 3; // 碎片大小
+            // 隨機發光三原色之一
+            const seed = Math.random();
+            if (seed < 0.33) this.color = { r: 255, g: 50, b: 50 };      // 紅
+            else if (seed < 0.66) this.color = { r: 50, g: 255, b: 50 }; // 綠
+            else this.color = { r: 50, g: 50, b: 255 };                  // 藍
         }
-
-        update() {
-            // 如果玩家滑鼠按住，就對小球施加朝向滑鼠位置的重力加速度
-            if (mouse.isDown) {
-                const dx = mouse.x - this.x;
-                const dy = mouse.y - this.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-
-                if (distance > 10) {
-                    // 物理模擬：萬有引力公式原理（引力強度與距離成反比）
-                    const gravityStrength = 150 / (distance); 
-                    this.vx += (dx / distance) * gravityStrength;
-                    this.vy += (dy / distance) * gravityStrength;
-                }
-            }
-
-            // 更新位置
-            this.x += this.vx;
-            this.y += this.vy;
-        }
-
         draw() {
             ctx.beginPath();
-            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-            ctx.fillStyle = this.color;
-            // 製作漂亮的發光霓虹特效 (利用 Canvas 原生陰影)
-            ctx.shadowBlur = 12;
-            ctx.shadowColor = this.color;
+            ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+            ctx.fillStyle = getRGBString(this.color);
             ctx.fill();
-            ctx.shadowBlur = 0; // 重設陰影，避免影響其他繪圖性能
         }
     }
 
-    // 核心主循環 (每秒執行約 60 次)
+    // 3. AI 敵對大色球類別
+    class Enemy {
+        constructor() {
+            this.reset();
+        }
+        reset() {
+            // 從螢幕邊緣外隨機誕生
+            this.x = Math.random() > 0.5 ? -30 : canvas.width + 30;
+            this.y = Math.random() * canvas.height;
+            this.r = Math.random() * 20 + 10; // 隨機體型 10~30
+            this.color = {
+                r: Math.random() * 255,
+                g: Math.random() * 255,
+                b: Math.random() * 255
+            };
+            this.speed = Math.random() * 0.8 + 0.8;
+        }
+        update() {
+            // AI 行為樹：計算與玩家的距離、體型與顏色相似度
+            let dx = player.x - this.x;
+            let dy = player.y - this.y;
+            let dist = Math.hypot(dx, dy);
+
+            let colorDist = getColorDistance(this.color, player.color);
+            
+            // 決定 AI 要追逐還是逃跑
+            let isDangerousToPlayer = (this.r > player.r) && (colorDist > 120); 
+            let isWeakToPlayer = (this.r < player.r) || (colorDist <= 120);
+
+            let angle = Math.atan2(dy, dx);
+
+            // 如果比玩家強且距離近，就去追殺玩家
+            if (isDangerousToPlayer && dist < 250) {
+                this.x += Math.cos(angle) * this.speed * 1.3;
+                this.y += Math.sin(angle) * this.speed * 1.3;
+            } 
+            // 如果比玩家弱且距離太近，就反向逃跑
+            else if (isWeakToPlayer && dist < 150) {
+                this.x -= Math.cos(angle) * this.speed * 1.1;
+                this.y -= Math.sin(angle) * this.speed * 1.1;
+            }
+            // 平時就漫無目的游動
+            else {
+                this.x += (Math.random() - 0.5) * 2;
+                this.y += (Math.random() - 0.5) * 2;
+            }
+
+            // 邊界限制
+            if (this.x < -50 || this.x > canvas.width + 50 || this.y < -50 || this.y > canvas.height + 50) {
+                this.reset();
+            }
+        }
+        draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+            ctx.fillStyle = getRGBString(this.color);
+            ctx.fill();
+            
+            // 繪製敵人的外圈，外圈顏色代表它的「敵對度」
+            // 顏色越接近代表可以吃，畫綠圈；越危險畫紅圈
+            let colorDist = getColorDistance(this.color, player.color);
+            ctx.strokeStyle = (this.r > player.r && colorDist > 120) ? '#ff3333' : '#33ff33';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+    }
+
+    // 初始化遊戲物件
+    function init() {
+        foods = [];
+        enemies = [];
+        for (let i = 0; i < maxFoods; i++) foods.push(new Food());
+        for (let i = 0; i < maxEnemies; i++) enemies.push(new Enemy());
+        updateUI();
+    }
+
+    function updateUI() {
+        document.getElementById('score-val').innerText = Math.floor(player.r);
+        document.getElementById('color-preview').style.backgroundColor = getRGBString(player.color);
+    }
+
+    // 4. 核心遊戲主循環
     function gameLoop() {
         if (isGameOver) return;
 
-        // 1. 清空畫布，並留下一點點黑底尾跡（製造殘影流光感）
-        ctx.fillStyle = 'rgba(2, 2, 8, 0.2)';
+        // 繪製背景背景網格線，增添科技空間感
+        ctx.fillStyle = '#060814';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+        drawGrid();
 
-        // 2. 繪製中央收集器核心
-        drawCenterCore();
+        // 更新玩家位置（平滑跟隨滑鼠）
+        let targetX = mouse.x;
+        let targetY = mouse.y;
+        player.x += (targetX - player.x) * 0.08;
+        player.y += (targetY - player.y) * 0.08;
 
-        // 3. 繪製滑鼠重力場範圍效果
-        if (mouse.isDown) {
-            drawGravityField();
-        }
+        // 限制玩家不出螢幕外
+        player.x = Math.max(player.r, Math.min(canvas.width - player.r, player.x));
+        player.y = Math.max(player.r, Math.min(canvas.height - player.r, player.y));
 
-        // 4. 定時生成新的小球
-        spawnTimer++;
-        if (spawnTimer >= spawnRate) {
-            particles.push(new Particle());
-            spawnTimer = 0;
-            // 隨著分數變高，生球速度會稍微加快，增加難度
-            if (spawnRate > 25 && score % 5 === 0) spawnRate -= 1;
-        }
+        // 繪製玩家
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2);
+        ctx.fillStyle = getRGBString(player.color);
+        ctx.shadowBlur = player.r * 0.5;
+        ctx.shadowColor = getRGBString(player.color);
+        ctx.fill();
+        ctx.shadowBlur = 0; // 重置發光
 
-        // 5. 更新並繪製所有小球
-        for (let i = particles.length - 1; i >= 0; i--) {
-            const p = particles[i];
-            p.update();
-            p.draw();
+        // 處理食物碎片
+        for (let i = foods.length - 1; i >= 0; i--) {
+            foods[i].draw();
 
-            // 判斷條件 A：小球是否被中央核心成功捕捉
-            const distToCore = Math.hypot(gravitySource.x - p.x, gravitySource.y - p.y);
-            if (distToCore < gravitySource.radius + p.radius) {
-                particles.splice(i, 1);
-                score += 10;
-                document.getElementById('score-val').innerText = score;
-                continue;
+            // 玩家吃碎片碰撞偵測
+            let dist = Math.hypot(player.x - foods[i].x, player.y - foods[i].y);
+            if (dist < player.r + foods[i].r) {
+                // 核心機制：體型變大，且顏色混入碎片的顏色 (權重融合演算法)
+                player.r += 0.2; // 吃一個稍微變大
+                
+                // 混色演算法：98%原本色彩 + 2%食物色彩
+                player.color.r = player.color.r * 0.98 + foods[i].color.r * 0.02;
+                player.color.g = player.color.g * 0.98 + foods[i].color.g * 0.02;
+                player.color.b = player.color.b * 0.98 + foods[i].color.b * 0.02;
+
+                foods.splice(i, 1);
+                foods.push(new Food()); // 補上一顆新的
+                updateUI();
             }
+        }
 
-            // 判斷條件 B：小球是否飛出螢幕邊界外（漏接）
-            if (p.x < -40 || p.x > canvas.width + 40 || p.y < -40 || p.y > canvas.height + 40) {
-                particles.splice(i, 1);
-                hp -= 1;
-                document.getElementById('hp-val').innerText = hp;
+        // 處理 AI 敵對球
+        for (let i = enemies.length - 1; i >= 0; i--) {
+            let e = enemies[i];
+            e.update();
+            e.draw();
 
-                if (hp <= 0) {
+            // 玩家與 AI 球的衝突碰撞偵測
+            let dist = Math.hypot(player.x - e.x, player.y - e.y);
+            if (dist < player.r + e.r - 5) { // 稍微重疊時觸發吞噬
+                let colorDist = getColorDistance(player.color, e.color);
+
+                // 情況 A：顏色很相近 (距離小於120) 或者 玩家體型比對方大 ➔ 玩家吃掉 AI
+                if (colorDist <= 120 || player.r > e.r) {
+                    // 玩家吸收對方的體型
+                    player.r += e.r * 0.2;
+                    // 同時玩家顏色被對方同化一部分
+                    player.color.r = player.color.r * 0.7 + e.color.r * 0.3;
+                    player.color.g = player.color.g * 0.7 + e.color.g * 0.3;
+                    player.color.b = player.color.b * 0.7 + e.color.b * 0.3;
+                    
+                    enemies.splice(i, 1);
+                    let newEnemy = new Enemy();
+                    // 為了平衡，新生成的敵人有機會比玩家更大
+                    newEnemy.r = Math.random() * 20 + player.r - 5;
+                    enemies.push(newEnemy);
+                    updateUI();
+                } 
+                // 情況 B：對方比較大且顏色相斥 ➔ 玩家死亡
+                else {
                     endGame();
                 }
             }
         }
 
-        // 循環執行
         requestAnimationFrame(gameLoop);
     }
 
-    // 繪製中央核心
-    function drawCenterCore() {
-        ctx.beginPath();
-        ctx.arc(gravitySource.x, gravitySource.y, gravitySource.radius, 0, Math.PI * 2);
-        ctx.strokeStyle = '#00f260';
-        ctx.lineWidth = 3;
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = '#00f260';
-        ctx.stroke();
-
-        // 內圈實心
-        ctx.beginPath();
-        ctx.arc(gravitySource.x, gravitySource.y, 8, 0, Math.PI * 2);
-        ctx.fillStyle = '#ffffff';
-        ctx.fill();
-        ctx.shadowBlur = 0;
+    // 繪製裝飾用的背景科技網格
+    function drawGrid() {
+        ctx.strokeStyle = '#11152c';
+        ctx.lineWidth = 1;
+        const gridSize = 40;
+        for (let x = 0; x < canvas.width; x += gridSize) {
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+        }
+        for (let y = 0; y < canvas.height; y += gridSize) {
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+        }
     }
 
-    // 繪製滑鼠按住時的波紋引力圈
-    function drawGravityField() {
-        ctx.beginPath();
-        ctx.arc(mouse.x, mouse.y, 60, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(0, 210, 255, 0.4)';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([4, 4]); // 虛線效果
-        ctx.stroke();
-        ctx.setLineDash([]); // 還原實線
-
-        // 滑鼠中心的黑洞聚焦點
-        ctx.beginPath();
-        ctx.arc(mouse.x, mouse.y, 4, 0, Math.PI * 2);
-        ctx.fillStyle = '#00d2ff';
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = '#00d2ff';
-        ctx.fill();
-        ctx.shadowBlur = 0;
-    }
-
-    // 遊戲結束
     function endGame() {
         isGameOver = true;
-        document.getElementById('final-score').innerText = score;
+        document.getElementById('final-score').innerText = Math.floor(player.r);
         document.getElementById('game-over-screen').classList.add('show');
     }
 
-    // 重新開始遊戲
     function resetGame() {
-        score = 0;
-        hp = 5;
-        spawnRate = 60;
-        particles = [];
         isGameOver = false;
-        document.getElementById('score-val').innerText = score;
-        document.getElementById('hp-val').innerText = hp;
+        player.r = 15;
+        player.x = canvas.width / 2;
+        player.y = canvas.height / 2;
+        player.color = { r: Math.random() * 255, g: Math.random() * 255, b: Math.random() * 255 };
         document.getElementById('game-over-screen').classList.remove('show');
+        init();
         gameLoop();
     }
 
-    // 啟動遊戲
+    // 遊戲啟動啟動
+    init();
     gameLoop();
 </script>
 
