@@ -3,236 +3,256 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>數字填色遊戲</title>
+<title>魚兒數字填色</title>
 
 <style>
 body{
-    font-family: Arial, sans-serif;
-    display:flex;
-    justify-content:center;
-    gap:30px;
-    padding:20px;
+    font-family:Arial,sans-serif;
     background:#f5f5f5;
+    text-align:center;
 }
 
-#gameBoard{
+#board{
     display:grid;
+    grid-template-columns:repeat(10,40px);
     gap:2px;
+    justify-content:center;
+    margin:20px auto;
 }
 
 .cell{
-    width:60px;
-    height:60px;
+    width:40px;
+    height:40px;
     background:white;
     border:1px solid #ccc;
     display:flex;
     justify-content:center;
     align-items:center;
-    font-size:20px;
     font-weight:bold;
     cursor:pointer;
-    user-select:none;
 }
 
-#panel{
-    min-width:220px;
-}
-
-.colorBtn{
-    width:100%;
-    padding:10px;
-    margin:5px 0;
+.palette button{
+    margin:5px;
+    padding:10px 15px;
     border:none;
-    cursor:pointer;
     color:white;
-    font-size:18px;
     font-weight:bold;
-}
-
-#message{
-    margin-top:20px;
-    font-size:22px;
-    font-weight:bold;
-    color:green;
+    cursor:pointer;
 }
 </style>
 </head>
 <body>
 
-<div>
-    <h2 id="levelTitle">第 1 關</h2>
-    <div id="gameBoard"></div>
-</div>
+<h1>🐟 魚兒數字填色</h1>
+<h2 id="levelText"></h2>
 
-<div id="panel">
-    <h3>顏色對照表</h3>
-    <div id="colorList"></div>
+<div class="palette" id="palette"></div>
 
-    <h3>目前選擇：</h3>
-    <div id="selectedColor">尚未選擇</div>
+<p>目前選擇：
+<span id="currentColor">無</span>
+</p>
 
-    <div id="message"></div>
-</div>
+<div id="board"></div>
+
+<h2 id="message"></h2>
 
 <script>
 
-const levels = [
-
-{
-grid:[
-[1,1,1,1,1],
-[1,2,2,2,1],
-[1,2,3,2,1],
-[1,2,2,2,1],
-[1,1,1,1,1]
-],
-colors:{
-1:"#FFD700",
-2:"#FF6347",
-3:"#000000"
-}
-},
-
-{
-grid:[
-[0,1,1,1,0],
-[1,2,2,2,1],
-[1,2,3,2,1],
-[1,2,2,2,1],
-[0,1,1,1,0]
-],
-colors:{
-1:"#87CEEB",
-2:"#FFFFFF",
-3:"#FFD700"
-}
-}
-
-];
+const colors = {
+    1:"#ff595e",
+    2:"#ffca3a",
+    3:"#8ac926",
+    4:"#1982c4",
+    5:"#6a4c93"
+};
 
 let currentLevel = 0;
-let selectedNumber = null;
+let selectedColor = null;
 
-function loadLevel(){
+/* 建立魚圖案 */
+function createFish(pattern){
 
-document.getElementById("message").textContent="";
+    const grid = [];
 
-const level = levels[currentLevel];
-const board = document.getElementById("gameBoard");
+    for(let r=0;r<10;r++){
+        grid[r]=[];
 
-board.innerHTML="";
-
-const rows = level.grid.length;
-const cols = level.grid[0].length;
-
-board.style.gridTemplateColumns=`repeat(${cols},60px)`;
-
-for(let r=0;r<rows;r++){
-    for(let c=0;c<cols;c++){
-
-        const num = level.grid[r][c];
-
-        const cell=document.createElement("div");
-        cell.className="cell";
-
-        if(num===0){
-            cell.style.visibility="hidden";
-        }else{
-            cell.textContent=num;
-            cell.dataset.answer=num;
-
-            cell.addEventListener("click",()=>paintCell(cell));
+        for(let c=0;c<10;c++){
+            grid[r][c]=0;
         }
+    }
 
-        board.appendChild(cell);
+    /* 魚身 */
+    for(let r=2;r<=7;r++){
+
+        for(let c=2;c<=7;c++){
+
+            grid[r][c]=((c-2+pattern)%5)+1;
+        }
+    }
+
+    /* 尾巴 */
+    grid[3][0]=2;
+    grid[4][1]=1;
+    grid[5][1]=1;
+    grid[6][0]=2;
+
+    /* 魚嘴 */
+    grid[4][8]=3;
+    grid[5][8]=3;
+    grid[3][9]=4;
+    grid[6][9]=4;
+
+    return grid;
+}
+
+/* 10關 */
+const levels=[];
+
+for(let i=0;i<10;i++){
+
+    levels.push(createFish(i));
+}
+
+function createPalette(){
+
+    const palette =
+    document.getElementById("palette");
+
+    for(let num in colors){
+
+        const btn =
+        document.createElement("button");
+
+        btn.style.background=
+        colors[num];
+
+        btn.textContent=
+        num+"號";
+
+        btn.onclick=()=>{
+
+            selectedColor =
+            Number(num);
+
+            document.getElementById(
+            "currentColor"
+            ).textContent=
+            num+"號";
+        };
+
+        palette.appendChild(btn);
     }
 }
 
-document.getElementById("levelTitle").textContent=
-`第 ${currentLevel+1} 關`;
+function loadLevel(){
 
-loadColors();
+    document.getElementById(
+    "levelText"
+    ).textContent=
+    `第 ${currentLevel+1} 關 / 10`;
+
+    document.getElementById(
+    "message"
+    ).textContent="";
+
+    const board =
+    document.getElementById("board");
+
+    board.innerHTML="";
+
+    const grid =
+    levels[currentLevel];
+
+    for(let r=0;r<10;r++){
+
+        for(let c=0;c<10;c++){
+
+            const value=
+            grid[r][c];
+
+            const cell=
+            document.createElement("div");
+
+            cell.className="cell";
+
+            if(value===0){
+
+                cell.style.visibility=
+                "hidden";
+
+            }else{
+
+                cell.textContent=
+                value;
+
+                cell.dataset.answer=
+                value;
+
+                cell.onclick=
+                ()=>paint(cell);
+            }
+
+            board.appendChild(cell);
+        }
+    }
 }
 
-function loadColors(){
+function paint(cell){
 
-const level = levels[currentLevel];
-const colorList = document.getElementById("colorList");
+    if(selectedColor===null)
+    return;
 
-colorList.innerHTML="";
+    const answer =
+    Number(cell.dataset.answer);
 
-for(const num in level.colors){
+    if(answer===selectedColor){
 
-    const btn=document.createElement("button");
+        cell.style.background=
+        colors[selectedColor];
 
-    btn.className="colorBtn";
-    btn.style.background=level.colors[num];
-    btn.textContent=`${num} 號顏色`;
+        cell.textContent="";
 
-    btn.onclick=()=>{
-        selectedNumber=num;
-        document.getElementById("selectedColor").textContent=
-        `${num} 號顏色`;
-    };
+        cell.dataset.done="1";
 
-    colorList.appendChild(btn);
-}
-}
-
-function paintCell(cell){
-
-if(!selectedNumber) return;
-
-const answer = cell.dataset.answer;
-
-if(answer===selectedNumber){
-
-    const level = levels[currentLevel];
-
-    cell.style.background=
-        level.colors[selectedNumber];
-
-    cell.textContent="";
-    cell.dataset.done="true";
-
-    checkWin();
-}
+        checkWin();
+    }
 }
 
 function checkWin(){
 
-const cells =
-document.querySelectorAll(".cell[data-answer]");
+    const cells=
+    document.querySelectorAll(
+    ".cell[data-answer]"
+    );
 
-for(const cell of cells){
+    for(let cell of cells){
 
-    if(cell.dataset.done!=="true"){
+        if(cell.dataset.done!=="1")
         return;
     }
+
+    document.getElementById(
+    "message"
+    ).textContent=
+    "🎉 恭喜過關！";
+
+    setTimeout(()=>{
+
+        currentLevel++;
+
+        if(currentLevel>=10){
+
+            currentLevel=0;
+        }
+
+        loadLevel();
+
+    },1500);
 }
 
-document.getElementById("message").textContent=
-"🎉 恭喜過關！";
-
-setTimeout(()=>{
-
-    currentLevel++;
-
-    if(currentLevel>=levels.length){
-
-        alert("🏆 全部關卡完成！");
-        currentLevel=0;
-    }
-
-    selectedNumber=null;
-    document.getElementById("selectedColor").textContent=
-    "尚未選擇";
-
-    loadLevel();
-
-},1500);
-}
-
+createPalette();
 loadLevel();
 
 </script>
